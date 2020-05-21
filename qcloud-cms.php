@@ -3,7 +3,7 @@
 Plugin Name: QCLoud CMS
 Plugin URI: https://github.com/qcminecraft/qcloud-cms
 Description: 使用腾讯云文本安全检查文章、评论
-Version:  1.0
+Version:  1.1
 Author: 青草
 Author URI: https://github.com/qcminecraft/
 */
@@ -19,9 +19,22 @@ function check_post($post_id){
 	$get_post = get_post($post_id, ARRAY_A);
 	if(!$get_post) return null;
 	if(!current_user_can('level_7'))
-		if(qcloud_cms(base64_encode(strip_tags($get_post['post_title']."-".$get_post['post_content']))))
+		if(qcloud_cms(strip_tags($get_post['post_title']."-".$get_post['post_content'])))
 			$wpdb->update($wpdb->prefix . "posts", ["post_status" => "pending"], ["id"=> $post_id]);
 	return null;
+}
+
+function lxtx_page_approved_comment($approved, $data){
+    if (qcloud_cms(strip_tags($data['comment_author'].'-'.$data['comment_content']))) {
+		$approved = 0;
+        if( $user_id = $data['user_id'] ){
+            $user = get_userdata( $user_id );
+            if ( $user_id == get_post($post)->post_author || $user->has_cap( 'moderate_comments' ) ){
+                $approved = 1;
+            }
+        }
+    }
+    return $approved;
 }
 
 function qc_add_admin_menu(  ) { 
@@ -44,7 +57,7 @@ function qc_settings_init(  ) {
 
 	add_settings_field( 
 		'enable_comments', 
-		__( '启用评论检测（未完成）', 'qc' ), 
+		__( '启用评论检测', 'qc' ), 
 		'enable_comments_render', 
 		'pluginPage', 
 		'qc_pluginPage_section' 
@@ -82,7 +95,7 @@ function enable_comments_render(  ) {
 
 	$options = get_option( 'qc_settings' );
 	?>
-	<input disabled='disabled' type='checkbox' name='qc_settings[enable_comments]' <?php checked( @$options['enable_comments'], 1 ); ?> value='1'>
+	<input type='checkbox' name='qc_settings[enable_comments]' <?php checked( @$options['enable_comments'], 1 ); ?> value='1'>
 	<?php
 
 }
@@ -147,6 +160,7 @@ function qc_options_page(  ) {
 }
 
 function qcloud_cms($text = ""){
+	$text = base64_encode($text);
 	$options = get_option('qc_settings');
 	$secretId = $options['api_key'];
 	$secretKey = $options['api_secret'];

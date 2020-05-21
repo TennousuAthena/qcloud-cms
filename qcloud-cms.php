@@ -12,6 +12,7 @@ add_action( 'admin_init', 'qc_settings_init' );
 
 //add_action('pre_post_update', 'check_post');
 add_action('publish_post', 'check_post');
+add_action('pre_comment_approved', 'check_comments', 10, 2);
 
 function check_post($post_id){
 	global $wpdb;
@@ -24,7 +25,7 @@ function check_post($post_id){
 	return null;
 }
 
-function lxtx_page_approved_comment($approved, $data){
+function check_comments($approved, $data){
     if (qcloud_cms(strip_tags($data['comment_author'].'-'.$data['comment_content']))) {
 		$approved = 0;
         if( $user_id = $data['user_id'] ){
